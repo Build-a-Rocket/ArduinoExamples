@@ -25,6 +25,9 @@ void setup()
   radio.powerUp();
   
   //set the address
+  radio.setAddressWidth(5);
+  radio.setDataRate(RF24_2MBPS);
+  radio.setCRCLength(RF24_CRC_16);
   radio.openReadingPipe(0, address);
   radio.setPALevel(RF24_PA_MAX);
   radio.setChannel(channel);

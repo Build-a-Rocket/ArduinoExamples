@@ -25,10 +25,13 @@ void setup()
   radio.powerUp();
 
   //set the address
-  radio.openWritingPipe(address);
+  radio.setAddressWidth(5);
+  radio.setDataRate(RF24_2MBPS);
+  radio.setCRCLength(RF24_CRC_16);
   radio.setPALevel(RF24_PA_MAX);
-  radio.setChannel(125);
-  radio.stopListening();
+  radio.setChannel(channel);
+  radio.openWritingPipe(address);
+  radio.startListening();
 }
 
 void loop()
