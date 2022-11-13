@@ -100,6 +100,7 @@ void setup()
 
 void loop()
 {
+  Serial.println("Hello World!");
   writeMessage("Hello World!");
   delay(1000);
 }
