@@ -3,7 +3,13 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
+#include "Adafruit_BMP3XX.h"
+#include <Adafruit_LSM6DSOX.h>
 #include "camera_interface.h"
+
+//I2C Pins
+#define I2C_SCL 2
+#define I2C_SDA 4
 
 // nRF24 Pins
 #define NRF24_SCLK 14
@@ -20,6 +26,16 @@ const uint8_t address[5] = {0, 0, 0, 0, 1};
 
 // the frequency our radio listens and writes on (2.4 Ghz - 2.525 Ghz)
 const uint8_t channel = 125;
+
+// bmp388
+#define SEALEVELPRESSURE_HPA (1013.25)
+Adafruit_BMP3XX bmp;
+
+// lsm6d
+Adafruit_LSM6DSOX sox;
+
+//image frame to send
+byte *frame;
 
 void writeBytes(byte message[], int len)
 {
@@ -97,7 +113,41 @@ void setup()
   //frame = (byte *)malloc(10000);
   //Serial.end();
 
-  writeMessage("Camera Initialized");
+  //writeMessage("Camera Initialized");
+
+  Wire.begin(I2C_SDA, I2C_SCL);
+
+  while (!bmp.begin_I2C())
+  {
+    Serial.println("Failed to find BMP388");
+    writeMessage("Failed to find BMP388");
+    delay(500);
+  }
+
+  Serial.println("Found BMP388");
+  writeMessage("Found BMP388");
+
+  // Set up oversampling and filter initialization
+  bmp.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
+  bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
+  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
+  bmp.setOutputDataRate(BMP3_ODR_50_HZ);
+
+  while (!sox.begin_I2C())
+  {
+    Serial.println("Failed to find LSM6D");
+    writeMessage("Failed to find LSM6D");
+    delay(500);
+  }
+
+  Serial.println("Found LSM6D");
+  writeMessage("Found LSM6D");
+
+  // setup IMU
+  sox.setAccelRange(LSM6DS_ACCEL_RANGE_16_G);
+  sox.setGyroRange(LSM6DS_GYRO_RANGE_125_DPS);
+  sox.setAccelDataRate(LSM6DS_RATE_12_5_HZ);
+  sox.setGyroDataRate(LSM6DS_RATE_12_5_HZ);
 
   Serial.println("Moving to loop");
   writeMessage("Moving to loop");
@@ -107,14 +157,23 @@ void setup()
 
 void loop()
 {  
-  String telemetry = String(25) + ",";
-  telemetry += String(95) + ",";
-  telemetry += String(0.1) + ",";
-  telemetry += String(0.2) + ",";
-  telemetry += String(0.3) + ",";
-  telemetry += String(0.01) + ",";
-  telemetry += String(0.02) + ",";
-  telemetry += String(0.03) + "\n\r";
+  bmp.performReading();
+
+  // imu events
+  sensors_event_t accel;
+  sensors_event_t gyro;
+  sensors_event_t temp;
+  sox.getEvent(&accel, &gyro, &temp);
+  
+  String telemetry = "TEL,";
+  telemetry += String(bmp.temperature) + ",";
+  telemetry += String(bmp.readAltitude(SEALEVELPRESSURE_HPA)) + ",";
+  telemetry += String(accel.acceleration.x) + ",";
+  telemetry += String(accel.acceleration.y) + ",";
+  telemetry += String(accel.acceleration.z) + ",";
+  telemetry += String(gyro.gyro.x) + ",";
+  telemetry += String(gyro.gyro.y) + ",";
+  telemetry += String(gyro.gyro.z) + ",TED";
   writeBytes((byte *)telemetry.c_str(), strlen(telemetry.c_str()));
 
   //int bytes = ESP_CAMERA::get_frame(frame);
