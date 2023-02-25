@@ -25,7 +25,9 @@ const uint8_t rxa[5] = {0x02, 0x00, 0x00, 0x00, 0x00};
 void setup()
 {
   SPI2.begin(NRF24_SCLK, NRF24_MISO, NRF24_MOSI, NRF24_CS);
+  
   Serial.begin(115200);
+  
   if (!radio.begin(&SPI2))
   {
     Serial.println("Failed to start radio...");
@@ -75,7 +77,8 @@ void loop()
 { 
 
   Serial.println("Transmitting...");
-  RadioHelpers::writeMessage("Hello, World!");
+  
+  RadioHelpers::writeMessage("Hello, World.");
   
   delay(500);
 }
