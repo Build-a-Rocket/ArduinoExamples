@@ -77,8 +77,16 @@ void loop()
 { 
 
   Serial.println("Transmitting...");
+
+  double altitude = 0;
+  double temperature = 0;
   
-  RadioHelpers::writeMessage("Hello, World.");
+  String telemetry = "START,";
+  telemetry += String(altitude) + ",";
+  telemetry += String(temperature) + ",";
+  telemetry += "END\n";
+  
+  RadioHelpers::writeMessage(telemetry);
   
   delay(500);
 }
