@@ -111,7 +111,6 @@ void setup()
 
   //ESP_CAMERA::init_camera();
   //frame = (byte *)malloc(10000);
-  //Serial.end();
 
   //writeMessage("Camera Initialized");
 
