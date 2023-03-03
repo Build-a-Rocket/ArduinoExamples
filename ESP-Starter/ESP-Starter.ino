@@ -5,10 +5,11 @@
 #include <RF24.h>
 #include "radio_helpers.h"
 #include "Adafruit_BMP3XX.h"
+#include <Adafruit_LSM6DSOX.h>
 
 // I2C Pins
-#define I2C_SCL 2 // clock signal
-#define I2C_SDA 4 // data bidirectional
+#define I2C_SCL 2
+#define I2C_SDA 4
 
 // nRF24 Pins
 #define NRF24_SCLK 14 // out green
@@ -27,9 +28,12 @@ RF24 radio(NRF24_CE, NRF24_CS);
 const uint8_t txa[5] = {0x01, 0x00, 0x00, 0x00, 0x00};
 const uint8_t rxa[5] = {0x02, 0x00, 0x00, 0x00, 0x00};
 
-// bmp stuff
+// bmp
 #define SEALEVEL_HPA 1013.25
 Adafruit_BMP3XX bmp;
+
+// lsm
+Adafruit_LSM6DSOX lsm;
 
 void setup()
 {
@@ -78,15 +82,31 @@ void setup()
 
   Wire.begin(I2C_SDA, I2C_SCL);
 
-  while (!bmp.begin_I2C())
+  while(!bmp.begin_I2C())
   {
-    Serial.println("Failed to find the BMP388");
-    RadioHelpers::writeMessage("Failed to find the BMP388");
+    Serial.println("BMP388 Not Found");
+    RadioHelpers::writeMessage("BMP388 Not Found");
     delay(1000);
   }
 
-  Serial.println("Found BMP388");
-  RadioHelpers::writeMessage("Found BMP388");
+  Serial.println("BMP Found");
+  RadioHelpers::writeMessage("BMP Found");
+
+  // improve data
+  bmp.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
+  bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
+  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
+  bmp.setOutputDataRate(BMP3_ODR_50_HZ);
+
+  while(!lsm.begin_I2C())
+  {
+    Serial.println("LSM Not Found");
+    RadioHelpers::writeMessage("LSM Not Found");
+    delay(1000);
+  }
+
+  Serial.println("LSM Found");
+  RadioHelpers::writeMessage("LSM Found");
   
   Serial.println("Setup Complete");
   RadioHelpers::writeMessage("Setup Complete");
@@ -96,6 +116,10 @@ void setup()
 void loop()
 { 
   bmp.performReading();
+
+  // imu events
+  sensors_event_t a, g, t;
+  lsm.getEvent(&a, &g, &t);
   
   Serial.println("Transmitting...");
 
@@ -105,6 +129,12 @@ void loop()
   String telemetry = "START,";
   telemetry += String(altitude) + ",";
   telemetry += String(temperature) + ",";
+  telemetry += String(a.acceleration.x) + ",";
+  telemetry += String(a.acceleration.y) + ",";
+  telemetry += String(a.acceleration.z) + ",";
+  telemetry += String(g.gyro.x) + ",";
+  telemetry += String(g.gyro.y) + ",";
+  telemetry += String(g.gyro.z) + ",";
   telemetry += "END\n";
   
   RadioHelpers::writeMessage(telemetry);
