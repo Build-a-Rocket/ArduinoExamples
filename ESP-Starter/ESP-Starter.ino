@@ -139,5 +139,5 @@ void loop()
   
   RadioHelpers::writeMessage(telemetry);
   
-  delay(500);
+  delay(100);
 }
