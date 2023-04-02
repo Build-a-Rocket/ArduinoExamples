@@ -65,7 +65,7 @@ namespace RadioHelpers
   
   void writeMessage(String message, bool newLine = true)
   {
-    String packet = message + ((newLine) ? "\r\n" : "");
+    String packet = "MSP" + message + ((newLine) ? "MEP\r\n" : "MEP");
   
     writeBytes((byte *)packet.c_str(), strlen(packet.c_str()));
   }

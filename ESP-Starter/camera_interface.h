@@ -9,7 +9,7 @@ namespace ESP_CAMERA
   const byte footer[] = { 'V', 'E', 'D' };
   
   void init_camera();
-  int get_frame(byte *frame);
+  int get_frame(byte *frame, bool add_headers = true);
 }
 
 #endif

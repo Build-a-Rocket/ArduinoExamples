@@ -88,7 +88,7 @@ void ESP_CAMERA::init_camera()
   s->set_colorbar(s, 0);       // 0 = disable , 1 = enable
 }
 
-int ESP_CAMERA::get_frame(byte *frame)
+int ESP_CAMERA::get_frame(byte *frame, bool add_headers)
 {
   int bytes = -1;
   camera_fb_t *fb = esp_camera_fb_get();
@@ -96,11 +96,18 @@ int ESP_CAMERA::get_frame(byte *frame)
   {
     Serial.println("Failed to get frame buffer.");
     return bytes;
-  } else {   
-    memcpy(&frame[0], header, 3);
-    memcpy(&frame[3], fb->buf, fb->len);
-    memcpy(&frame[fb->len + 3], footer, 3);
-    bytes = 6 + fb->len;
+  } else {
+    if (add_headers)
+    { 
+      memcpy(&frame[0], header, 3);
+      memcpy(&frame[3], fb->buf, fb->len);
+      memcpy(&frame[fb->len + 3], footer, 3);
+      bytes = 6 + fb->len;
+    } else
+    {
+      memcpy(&frame, fb->buf, fb->len);
+      bytes = fb->len;
+    }
   }
   esp_camera_fb_return(fb);
 
