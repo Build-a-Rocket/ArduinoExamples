@@ -18,6 +18,7 @@ namespace RadioHelpers
   {
     if (fast)
     {
+      //_radio.startFastWrite(msg, len, false);
       if (!_radio.writeFast(msg, len))
       {
         _radio.txStandBy();
