@@ -1,11 +1,17 @@
-
+#include "camera_interface.h"
 
 namespace RadioHelpers
 {
+
+  bool stream = true;
+  bool record = false;
+  
   namespace
   {
     RF24 _radio;
   }
+
+  void writeMessage(String message, bool newLine = true);
 
   void setRadio(RF24 &radio_instance)
   {
@@ -36,6 +42,35 @@ namespace RadioHelpers
       received_message = String(ack);
   
       Serial.println("Received: " + received_message);
+      writeMessage("Received: " + received_message);
+
+      if (received_message.indexOf("stream_toggle") != -1)
+      {
+        writeMessage("Toggling Video Stream...");
+        stream = !stream;
+
+        if (stream)
+        {
+          record = false;
+          ESP_CAMERA::init_stream_camera();
+        }
+
+        received_message = "";
+      }
+
+      if (received_message.indexOf("record_toggle") != -1)
+      {
+        writeMessage("Toggling Video Recording...");
+        record = !record;
+
+        if (record)
+        {
+          stream = false;
+          ESP_CAMERA::init_video_camera();
+        }
+
+        received_message = "";
+      }
     }
   }
   
@@ -63,9 +98,9 @@ namespace RadioHelpers
     }
   }
   
-  void writeMessage(String message, bool newLine = true)
+  void writeMessage(String message, bool newLine)
   {
-    String packet = "MSP" + message + ((newLine) ? "MEP\r\n" : "MEP");
+    String packet = "MSP" + message + ((newLine) ? "\r\nMEP" : "MEP");
   
     writeBytes((byte *)packet.c_str(), strlen(packet.c_str()));
   }

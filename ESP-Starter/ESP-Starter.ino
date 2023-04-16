@@ -7,6 +7,8 @@
 #include "Adafruit_BMP3XX.h"
 #include <Adafruit_LSM6DSOX.h>
 #include "camera_interface.h"
+#include "FS.h"                // SD Card ESP32
+#include "SD_MMC.h"            // SD Card ESP32
 
 // I2C Pins
 #define I2C_SCL 2
@@ -37,12 +39,18 @@ Adafruit_BMP3XX bmp;
 Adafruit_LSM6DSOX lsm;
 
 byte *frame;
+int frameNum = 0;
 
 void setup()
 {
-  SPI2.begin(NRF24_SCLK, NRF24_MISO, NRF24_MOSI, NRF24_CS);
-  
   Serial.begin(115200);
+  
+  /*if(!SD_MMC.begin("/sdcard", true)) {
+    Serial.println("SD Card Mount Failure...");
+    RadioHelpers::writeMessage("SD Card Mount Failure...");
+  }*/
+  
+  SPI2.begin(NRF24_SCLK, NRF24_MISO, NRF24_MOSI, NRF24_CS);
   
   if (!radio.begin(&SPI2))
   {
@@ -108,10 +116,16 @@ void setup()
     delay(1000);
   }
 
+  // set IMU limits
+  lsm.setAccelRange(LSM6DS_ACCEL_RANGE_16_G);
+  lsm.setGyroRange(LSM6DS_GYRO_RANGE_125_DPS);
+  lsm.setAccelDataRate(LSM6DS_RATE_12_5_HZ);
+  lsm.setGyroDataRate(LSM6DS_RATE_12_5_HZ);
+
   Serial.println("LSM Found");
   RadioHelpers::writeMessage("LSM Found");
 
-  ESP_CAMERA::init_camera();
+  ESP_CAMERA::init_stream_camera();
   frame = (byte *)malloc(10000);
 
   RadioHelpers::writeMessage("Camera Initialized");
@@ -123,6 +137,7 @@ void setup()
 
 void loop()
 { 
+  double start = millis();
   bmp.performReading();
 
   // imu events
@@ -137,21 +152,34 @@ void loop()
   String telemetry = "TSP,";
   telemetry += String(altitude) + ",";
   telemetry += String(temperature) + ",";
-  telemetry += String(a.acceleration.x) + ",";
-  telemetry += String(a.acceleration.y) + ",";
-  telemetry += String(a.acceleration.z) + ",";
+  telemetry += String(a.acceleration.x * 2) + ",";
+  telemetry += String(a.acceleration.y * 2) + ",";
+  telemetry += String(a.acceleration.z * 2) + ",";
   telemetry += String(g.gyro.x) + ",";
   telemetry += String(g.gyro.y) + ",";
   telemetry += String(g.gyro.z) + ",";
+  telemetry += String(millis()) + ",";
   telemetry += "TEP\n";
   
-  RadioHelpers::writeMessage(telemetry);
+  RadioHelpers::writeBytes((byte *)telemetry.c_str(), strlen(telemetry.c_str()));
 
-  /*int bytes = ESP_CAMERA::get_frame(frame, false);
-  if (bytes > 0)
+  if (RadioHelpers::stream)
   {
-    writeBytes(frame, bytes);
-  }*/
-  
-  delay(100);
+    int bytes = ESP_CAMERA::get_frame(frame, true);
+    if (bytes > 0)
+    {
+      RadioHelpers::writeBytes(frame, bytes);
+    }
+  } else if (RadioHelpers::record) {
+
+    ESP_CAMERA::get_frame(NULL, false, frameNum);  
+    frameNum++;
+  }
+
+
+  double stopTime = millis() - start;
+  if (stopTime < 33)
+  {
+    delay((int)(33 - stopTime));
+  }
 }
